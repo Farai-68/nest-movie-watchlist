@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // We will hash this with bcrypt!
+  movies    Movie[]  // A user can have many movies
+  createdAt DateTime @default(now())
+}
+
 model Movie {
   id          String   @id @default(uuid())
   title       String
@@ -14,4 +22,8 @@ model Movie {
   isWatched   Boolean  @default(false)
   rating      Int?
   createdAt   DateTime @default(now())
+  
+  // The relational link back to the User
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

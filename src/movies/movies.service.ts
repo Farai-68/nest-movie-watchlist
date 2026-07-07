@@ -9,10 +9,16 @@ export class MoviesService {
   constructor(private prisma: PrismaService) {}
 
   // 1. Save a new movie to the database
-  create(createMovieDto: CreateMovieDto) {
+create(createMovieDto: CreateMovieDto) {
+    // TEMPORARILY DISABLED: We will update this to include the logged-in User's ID later!
+    return 'Movie creation is paused while we build the Auth system.';
+    
+    /* 
     return this.prisma.movie.create({
       data: createMovieDto,
     });
+    */
+  
   }
 
   // 2. Fetch every movie in the database
