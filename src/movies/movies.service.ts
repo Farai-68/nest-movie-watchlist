@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,29 +18,38 @@ export class MoviesService {
 
   findAll(userId: string) {
     return this.prisma.movie.findMany({
-      where: {
-        userId: userId,
-      },
+      where: { userId: userId },
     });
   }
 
-  // Changed id from number to string!
-  findOne(id: string) {
-    return this.prisma.movie.findUnique({
-      where: { id },
+  async findOne(id: string, userId: string) {
+    // We query by BOTH the movie ID and the user's ID
+    const movie = await this.prisma.movie.findFirst({
+      where: { id: id, userId: userId },
     });
+    
+    if (!movie) {
+      throw new NotFoundException('Movie not found or you do not have permission to view it');
+    }
+    return movie;
   }
 
-  // Changed id from number to string!
-  update(id: string, updateMovieDto: UpdateMovieDto) {
+  async update(id: string, updateMovieDto: UpdateMovieDto, userId: string) {
+    // 1. Verify ownership first
+    await this.findOne(id, userId); 
+    
+    // 2. If it didn't throw an error, proceed with the update
     return this.prisma.movie.update({
       where: { id },
       data: updateMovieDto,
     });
   }
 
-  // Changed id from number to string!
-  remove(id: string) {
+  async remove(id: string, userId: string) {
+    // 1. Verify ownership first
+    await this.findOne(id, userId);
+    
+    // 2. If it didn't throw an error, proceed with deletion
     return this.prisma.movie.delete({
       where: { id },
     });

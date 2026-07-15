@@ -19,21 +19,18 @@ export class MoviesController {
     return this.moviesService.findAll(req.user.userId || req.user.sub);
   }
 
-  // Removed the + sign from the id!
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.moviesService.findOne(id);
+  findOne(@Param('id') id: string, @Request() req) {
+    return this.moviesService.findOne(id, req.user.userId || req.user.sub);
   }
 
-  // Removed the + sign from the id!
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMovieDto: UpdateMovieDto) {
-    return this.moviesService.update(id, updateMovieDto);
+  update(@Param('id') id: string, @Body() updateMovieDto: UpdateMovieDto, @Request() req) {
+    return this.moviesService.update(id, updateMovieDto, req.user.userId || req.user.sub);
   }
 
-  // Removed the + sign from the id!
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.moviesService.remove(id);
+  remove(@Param('id') id: string, @Request() req) {
+    return this.moviesService.remove(id, req.user.userId || req.user.sub);
   }
 }
