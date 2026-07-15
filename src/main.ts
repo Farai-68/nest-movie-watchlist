@@ -5,9 +5,12 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // This is the magical line that turns on our DTO security checks!
-  app.useGlobalPipes(new ValidationPipe());
+  // Enforce validation rules globally
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   
-  await app.listen(process.env.PORT ?? 3000);
+  // Open the gates for your frontend to communicate!
+  app.enableCors();
+
+  await app.listen(3000);
 }
 bootstrap();

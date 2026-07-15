@@ -7,14 +7,15 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MoviesService {
   constructor(private prisma: PrismaService) {}
 
-  create(createMovieDto: CreateMovieDto, userId: string) {
-    return this.prisma.movie.create({
-      data: {
-        ...createMovieDto,
-        userId: userId,
-      },
-    });
-  }
+ create(createMovieDto: CreateMovieDto, userId: string) {
+      return this.prisma.movie.create({
+        data: {
+          title: createMovieDto.title,
+          description: createMovieDto.description || '', // Forces a string even if left blank
+          userId: userId,
+        },
+      });
+    }
 
   findAll(userId: string) {
     return this.prisma.movie.findMany({
