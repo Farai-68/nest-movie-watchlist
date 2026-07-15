@@ -1,39 +1,37 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MoviesService {
-  // Inject our global Prisma database service
   constructor(private prisma: PrismaService) {}
 
-  // 1. Save a new movie to the database
-create(createMovieDto: CreateMovieDto) {
-    // TEMPORARILY DISABLED: We will update this to include the logged-in User's ID later!
-    return 'Movie creation is paused while we build the Auth system.';
-    
-    /* 
+  create(createMovieDto: CreateMovieDto, userId: string) {
     return this.prisma.movie.create({
-      data: createMovieDto,
+      data: {
+        ...createMovieDto,
+        userId: userId,
+      },
     });
-    */
-  
   }
 
-  // 2. Fetch every movie in the database
-  findAll() {
-    return this.prisma.movie.findMany();
+  findAll(userId: string) {
+    return this.prisma.movie.findMany({
+      where: {
+        userId: userId,
+      },
+    });
   }
 
-  // 3. Fetch a single movie using its unique UUID
+  // Changed id from number to string!
   findOne(id: string) {
     return this.prisma.movie.findUnique({
       where: { id },
     });
   }
 
-  // 4. Update a movie's details (like marking it watched or updating a rating)
+  // Changed id from number to string!
   update(id: string, updateMovieDto: UpdateMovieDto) {
     return this.prisma.movie.update({
       where: { id },
@@ -41,7 +39,7 @@ create(createMovieDto: CreateMovieDto) {
     });
   }
 
-  // 5. Delete a movie completely
+  // Changed id from number to string!
   remove(id: string) {
     return this.prisma.movie.delete({
       where: { id },
