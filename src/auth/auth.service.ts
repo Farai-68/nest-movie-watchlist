@@ -35,30 +35,42 @@ export class AuthService {
       },
     });
   
-    // 4. Configure Nodemailer
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  
-    // 5. Create the reset link
-    const resetLink = `http://localhost:4200/reset-password?token=${resetToken}`;
-  
-    // 6. Send the email
-    const mailOptions = {
-      from: '"Watchlist App" <no-reply@watchlist.com>',
-      to: user.email,
-      subject: 'Password Reset Request',
-      html: `
-        <h2>Password Reset</h2>
-        <p>You requested to reset your password. Click the link below to set a new one:</p>
-        <a href="${resetLink}">Reset My Password</a>
-        <p><i>This link will expire in 15 minutes. If you did not request this, please ignore this email.</i></p>
-      `,
-    };
+   // 4. Configured Nodemailer with explicit Gmail settings
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+      
+        // 5. Create the reset link
+        
+     const resetLink = `https://movie-watchlist-ui.vercel.app/reset-password?token=${resetToken}`;
+      
+        // 6. Send the email with error catching
+        const mailOptions = {
+          from: '"Watchlist App" <no-reply@watchlist.com>',
+          to: user.email,
+          subject: 'Password Reset Request',
+          html: `
+            <h2>Password Reset</h2>
+            <p>You requested to reset your password. Click the link below to set a new one:</p>
+            <a href="${resetLink}">Reset My Password</a>
+            <p><i>This link will expire in 15 minutes. If you did not request this, please ignore this email.</i></p>
+          `,
+        };
+      
+        try {
+          await transporter.sendMail(mailOptions);
+          return { message: 'If an account exists, a reset link has been sent.' };
+        } catch (error) {
+          
+          console.error('❌ EMAIL ERROR:', error); 
+          throw new UnauthorizedException('Email failed to send. Check backend terminal.');
+        }
   
     await transporter.sendMail(mailOptions);
   
@@ -71,7 +83,7 @@ export class AuthService {
         where: {
           resetPasswordToken: token,
           resetPasswordExpires: {
-            gt: new Date(), // 'gt' means Greater Than the current time
+            gt: new Date(), 
           },
         },
       });
