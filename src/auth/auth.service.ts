@@ -1,9 +1,11 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import * as nodemailer from 'nodemailer'; 
+import { randomBytes } from 'crypto'; 
 
 @Injectable()
 export class AuthService {
@@ -11,6 +13,88 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
   ) {}
+
+  async forgotPassword(email: string) {
+    // 1. Find the user
+    const user = await this.prisma.user.findUnique({ where: { email } });
+      
+    if (!user) {
+      return { message: 'If an account exists, a reset link has been sent.' };
+    }
+  
+    // 2. Generate a 15-minute secure token
+    const resetToken = randomBytes(32).toString('hex');
+    const resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); 
+  
+    // 3. Save the token in the database
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetToken,
+        resetPasswordExpires,
+      },
+    });
+  
+    // 4. Configure Nodemailer
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  
+    // 5. Create the reset link
+    const resetLink = `http://localhost:4200/reset-password?token=${resetToken}`;
+  
+    // 6. Send the email
+    const mailOptions = {
+      from: '"Watchlist App" <no-reply@watchlist.com>',
+      to: user.email,
+      subject: 'Password Reset Request',
+      html: `
+        <h2>Password Reset</h2>
+        <p>You requested to reset your password. Click the link below to set a new one:</p>
+        <a href="${resetLink}">Reset My Password</a>
+        <p><i>This link will expire in 15 minutes. If you did not request this, please ignore this email.</i></p>
+      `,
+    };
+  
+    await transporter.sendMail(mailOptions);
+  
+    return { message: 'If an account exists, a reset link has been sent.' };
+  } 
+
+  async resetPassword(password: string, token: string) {
+      // 1. Find the user with this specific token and ensure it hasn't expired
+      const user = await this.prisma.user.findFirst({
+        where: {
+          resetPasswordToken: token,
+          resetPasswordExpires: {
+            gt: new Date(), // 'gt' means Greater Than the current time
+          },
+        },
+      });
+  
+      if (!user) {
+        throw new BadRequestException('Invalid or expired password reset token');
+      }
+  
+      // 2. Hash the brand new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // 3. Update the user in the database and wipe the temporary tokens clean
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          resetPasswordToken: null,
+          resetPasswordExpires: null,
+        },
+      });
+  
+      return { message: 'Password has been successfully reset' };
+    }
 
   async register(dto: RegisterDto) {
     const existingUser = await this.prisma.user.findUnique({

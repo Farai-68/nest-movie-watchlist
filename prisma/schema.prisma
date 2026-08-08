@@ -8,11 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // We will hash this with bcrypt!
-  movies    Movie[]  // A user can have many movies
-  createdAt DateTime @default(now())
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  createdAt            DateTime  @default(now())
+  
+ 
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+
+  movies               Movie[]
 }
 
 model Movie {
@@ -21,9 +26,11 @@ model Movie {
   description String
   isWatched   Boolean  @default(false)
   rating      Int?
-  createdAt   DateTime @default(now())
   
-  // The relational link back to the User
+  // --- New Field for Categories ---
+  category    String   @default("Movie") 
+  
+  createdAt   DateTime @default(now())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
