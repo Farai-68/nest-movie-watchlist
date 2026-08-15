@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import * as nodemailer from 'nodemailer'; 
 import { randomBytes } from 'crypto'; 
+import { google } from 'googleapis';
 
 @Injectable()
 export class AuthService {
@@ -14,19 +15,15 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async forgotPassword(email: string) {
-    // 1. Find the user
+async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
-      
-    if (!user) {
-      return { message: 'If an account exists, a reset link has been sent.' };
-    }
-  
-    // 2. Generate a 15-minute secure token
+    const response = { message: 'If an account exists, a reset link has been sent.' };
+
+    if (!user) return response;
+
     const resetToken = randomBytes(32).toString('hex');
-    const resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); 
-  
-    // 3. Save the token in the database
+    const resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
+
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -34,47 +31,59 @@ export class AuthService {
         resetPasswordExpires,
       },
     });
-  
-   // 4. Configured Nodemailer with explicit Gmail settings
-        const transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true,
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-          },
-        });
+
+    const resetLink = `https://movie-watchlist-ui.vercel.app/reset-password?token=${resetToken}`;
+
+    try {
+      // 1. Initialize the OAuth2 Client
+      const OAuth2 = google.auth.OAuth2;
+      const oauth2Client = new OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        'https://developers.google.com/oauthplayground' 
+      );
+
+      // 2. Hand over the Refresh Token
+      oauth2Client.setCredentials({
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+      });
+
+      // 3. Ask Google for a temporary, secure Access Token
+      const accessToken = await oauth2Client.getAccessToken();
+
+      // 4. Configure Nodemailer to use OAuth2 instead of a standard port/password
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          type: 'OAuth2',
+          user: process.env.EMAIL_USER,
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+          accessToken: accessToken.token,
+        },
+      });
+
+      const mailOptions = {
+        from: `"Watchlist App" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: 'Password Reset Request',
+        html: `
+          <h2>Password Reset</h2>
+          <p>You requested to reset your password. Click the link below to set a new one:</p>
+          <a href="${resetLink}">Reset My Password</a>
+          <p><i>This link will expire in 15 minutes. If you did not request this, please ignore this email.</i></p>
+        `,
+      };
+
+      // 5. Send the email securely over HTTPS (Port 443)
+      await transporter.sendMail(mailOptions);
       
-        // 5. Create the reset link
-        
-     const resetLink = `https://movie-watchlist-ui.vercel.app/reset-password?token=${resetToken}`;
-      
-        // 6. Send the email with error catching
-        const mailOptions = {
-          from: '"Watchlist App" <no-reply@watchlist.com>',
-          to: user.email,
-          subject: 'Password Reset Request',
-          html: `
-            <h2>Password Reset</h2>
-            <p>You requested to reset your password. Click the link below to set a new one:</p>
-            <a href="${resetLink}">Reset My Password</a>
-            <p><i>This link will expire in 15 minutes. If you did not request this, please ignore this email.</i></p>
-          `,
-        };
-      
-        try {
-          await transporter.sendMail(mailOptions);
-          return { message: 'If an account exists, a reset link has been sent.' };
-        } catch (error) {
-          
-          console.error('❌ EMAIL ERROR:', error); 
-          throw new UnauthorizedException('Email failed to send. Check backend terminal.');
-        }
-  
-    await transporter.sendMail(mailOptions);
-  
-    return { message: 'If an account exists, a reset link has been sent.' };
+      return response;
+    } catch (error) {
+      console.error('❌ EMAIL ERROR:', error);
+      return response;
+    }
   } 
 
   async resetPassword(password: string, token: string) {
