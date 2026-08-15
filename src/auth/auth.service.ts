@@ -56,11 +56,11 @@ async forgotPassword(email: string) {
         service: 'gmail',
         auth: {
           type: 'OAuth2',
-          user: process.env.EMAIL_USER,
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-          accessToken: accessToken.token,
+          user: process.env.EMAIL_USER as string,
+          clientId: process.env.GOOGLE_CLIENT_ID as string,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+          refreshToken: process.env.GOOGLE_REFRESH_TOKEN as string,
+          accessToken: accessToken.token as string,
         },
       });
 
