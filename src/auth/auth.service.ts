@@ -180,4 +180,12 @@ export class AuthService {
 
     return { message: 'Account successfully deleted' };
   }
+
+  async getProfile(userId: string) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true } 
+      });
+      return user;
+    }
 }
