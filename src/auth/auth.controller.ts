@@ -1,4 +1,14 @@
-import { Body, Controller, Post, HttpCode, HttpStatus, Delete, UseGuards, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  HttpCode,
+  HttpStatus,
+  Delete,
+  UseGuards,
+  Request,
+  Get,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -27,15 +37,24 @@ export class AuthController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body('password') password: string, @Body('token') token: string){
+  async resetPassword(
+    @Body('password') password: string,
+    @Body('token') token: string,
+  ) {
     return this.authService.resetPassword(password, token);
   }
 
- 
   @UseGuards(AuthGuard('jwt'))
   @Delete('account')
   async deleteAccount(@Request() req) {
-    // The JWT Guard automatically extracts the user's ID from the token into req.user.sub
-    return this.authService.deleteAccount(req.user.sub);
+    // Passport validate() returns { userId, email }
+    return this.authService.deleteAccount(req.user.userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('profile')
+  async getProfile(@Request() req) {
+    // Passport validate() returns { userId, email }
+    return this.authService.getProfile(req.user.userId);
   }
 }
